@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Nimbus — Real-Time Weather Dashboard</title>
+  <meta name="description" content="A stunning real-time weather dashboard powered by OpenWeatherMap. Get current conditions, hourly and 5-day forecasts, air quality, and more." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Outfit:wght@300;400;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <!-- API Key Modal -->
+  <div id="api-modal" class="modal-overlay active">
+    <div class="modal-card">
+      <div class="modal-icon">🌤️</div>
+      <h2 class="modal-title">Welcome to Nimbus</h2>
+      <p class="modal-desc">Enter your <strong>OpenWeatherMap API key</strong> to get started. You can get a free key at <a href="https://openweathermap.org/api" target="_blank">openweathermap.org</a>.</p>
+      <div class="modal-input-wrap">
+        <input id="api-key-input" type="text" placeholder="Paste your API key here…" autocomplete="off" spellcheck="false" />
+        <button id="api-key-submit" class="btn-primary">Connect</button>
+      </div>
+      <div style="margin-top: 12px; margin-bottom: 8px;">
+        <button id="btn-demo" class="btn-primary" style="width:100%; background: linear-gradient(135deg, var(--accent-3), #10b981); border: none;">Or Try Demo Mode (No Key Needed)</button>
+      </div>
+      <p id="api-key-error" class="api-error hidden">Invalid API key or request failed. Please try again.</p>
+      <p class="modal-hint">Your key is stored locally and never sent anywhere except OpenWeatherMap.</p>
+    </div>
+  </div>
+
+  <!-- Main App -->
+  <div id="app" class="app hidden">
+
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="sidebar-brand">
+        <span class="brand-icon">⛅</span>
+        <span class="brand-name">Nimbus</span>
+      </div>
+
+      <div class="search-wrap">
+        <div class="search-box">
+          <span class="search-icon">🔍</span>
+          <input id="city-search" type="text" placeholder="Search city…" autocomplete="off" />
+        </div>
+        <div id="suggestions" class="suggestions hidden"></div>
+      </div>
+
+      <!-- Today's Summary -->
+      <div class="today-card glass">
+        <div class="today-city" id="today-city">—</div>
+        <div class="today-date" id="today-date">—</div>
+        <div class="today-temp" id="today-temp">—</div>
+        <div class="today-feels" id="today-feels">—</div>
+        <div class="today-icon" id="today-icon">—</div>
+        <div class="today-desc" id="today-desc">—</div>
+        <div class="today-minmax">
+          <span id="today-min">—</span>
+          <span class="sep">/</span>
+          <span id="today-max">—</span>
+        </div>
+      </div>
+
+      <!-- Unit Toggle -->
+      <div class="unit-toggle">
+        <button id="btn-celsius" class="unit-btn active">°C</button>
+        <button id="btn-fahrenheit" class="unit-btn">°F</button>
+      </div>
+
+      <!-- Geolocation -->
+      <button id="btn-locate" class="btn-locate">
+        <span>📍</span> Use My Location
+      </button>
+
+      <!-- Change API Key -->
+      <button id="btn-change-key" class="btn-change-key">🔑 Change API Key</button>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+
+      <!-- Top Bar -->
+      <header class="topbar">
+        <div class="topbar-title">Weather Dashboard</div>
+        <div class="topbar-right">
+          <span id="last-updated" class="last-updated">—</span>
+          <button id="btn-refresh" class="btn-refresh" title="Refresh">↻</button>
+        </div>
+      </header>
+
+      <!-- Loading Overlay -->
+      <div id="loading-overlay" class="loading-overlay hidden">
+        <div class="spinner"></div>
+        <p>Fetching weather data…</p>
+      </div>
+
+      <!-- Error Banner -->
+      <div id="error-banner" class="error-banner hidden">
+        <span id="error-msg">Something went wrong.</span>
+        <button id="error-dismiss">✕</button>
+      </div>
+
+      <!-- Stats Row -->
+      <section class="stats-grid">
+        <div class="stat-card glass" id="card-humidity">
+          <div class="stat-icon">💧</div>
+          <div class="stat-label">Humidity</div>
+          <div class="stat-value" id="stat-humidity">—</div>
+          <div class="stat-bar-wrap"><div class="stat-bar" id="bar-humidity"></div></div>
+        </div>
+        <div class="stat-card glass" id="card-wind">
+          <div class="stat-icon">💨</div>
+          <div class="stat-label">Wind Speed</div>
+          <div class="stat-value" id="stat-wind">—</div>
+          <div class="stat-sub" id="stat-wind-dir">—</div>
+        </div>
+        <div class="stat-card glass" id="card-pressure">
+          <div class="stat-icon">🌡️</div>
+          <div class="stat-label">Pressure</div>
+          <div class="stat-value" id="stat-pressure">—</div>
+          <div class="stat-sub">hPa</div>
+        </div>
+        <div class="stat-card glass" id="card-visibility">
+          <div class="stat-icon">👁️</div>
+          <div class="stat-label">Visibility</div>
+          <div class="stat-value" id="stat-visibility">—</div>
+          <div class="stat-sub">km</div>
+        </div>
+        <div class="stat-card glass" id="card-uv">
+          <div class="stat-icon">☀️</div>
+          <div class="stat-label">UV Index</div>
+          <div class="stat-value" id="stat-uv">—</div>
+          <div class="stat-sub" id="stat-uv-label">—</div>
+        </div>
+        <div class="stat-card glass" id="card-sunrise">
+          <div class="stat-icon">🌅</div>
+          <div class="stat-label">Sunrise / Sunset</div>
+          <div class="stat-value" id="stat-sunrise">—</div>
+          <div class="stat-sub" id="stat-sunset">—</div>
+        </div>
+      </section>
+
+      <!-- Hourly Forecast -->
+      <section class="section-block">
+        <div class="section-header">
+          <h2 class="section-title">Hourly Forecast</h2>
+          <span class="section-badge">Next 24h</span>
+        </div>
+        <div class="hourly-scroll">
+          <div id="hourly-container" class="hourly-container">
+            <!-- Injected by JS -->
+          </div>
+        </div>
+      </section>
+
+      <!-- 5-Day Forecast -->
+      <section class="section-block">
+        <div class="section-header">
+          <h2 class="section-title">5-Day Forecast</h2>
+        </div>
+        <div id="daily-container" class="daily-container">
+          <!-- Injected by JS -->
+        </div>
+      </section>
+
+      <!-- Air Quality + Wind -->
+      <section class="two-col">
+
+        <!-- Air Quality -->
+        <div class="panel glass">
+          <h3 class="panel-title">🌬️ Air Quality</h3>
+          <div id="aqi-container">
+            <div class="aqi-gauge-wrap">
+              <div class="aqi-ring" id="aqi-ring">
+                <span id="aqi-value">—</span>
+                <small id="aqi-label">AQI</small>
+              </div>
+            </div>
+            <div class="aqi-details" id="aqi-details">
+              <!-- Injected by JS -->
+            </div>
+          </div>
+        </div>
+
+        <!-- Wind Compass -->
+        <div class="panel glass">
+          <h3 class="panel-title">🧭 Wind Compass</h3>
+          <div class="compass-wrap">
+            <div class="compass">
+              <div class="compass-labels">
+                <span class="cl n">N</span>
+                <span class="cl e">E</span>
+                <span class="cl s">S</span>
+                <span class="cl w">W</span>
+              </div>
+              <div class="compass-needle" id="compass-needle"></div>
+              <div class="compass-center"></div>
+            </div>
+            <div class="wind-stats">
+              <div class="wind-stat"><span class="ws-label">Speed</span><span class="ws-val" id="wc-speed">—</span></div>
+              <div class="wind-stat"><span class="ws-label">Direction</span><span class="ws-val" id="wc-dir">—</span></div>
+              <div class="wind-stat"><span class="ws-label">Gust</span><span class="ws-val" id="wc-gust">—</span></div>
+            </div>
+          </div>
+        </div>
+
+      </section>
+
+      <footer class="dash-footer">
+        Powered by <a href="https://openweathermap.org" target="_blank">OpenWeatherMap</a> &nbsp;·&nbsp; Nimbus Weather Dashboard
+      </footer>
+
+    </main>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
